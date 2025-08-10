@@ -1,59 +1,60 @@
-Code,Team_Name,Code_alt,Code_nst
-AFM,Atlanta Flames,AFM,AFM
-ANA,Anaheim Ducks,ANA,ANA
-ARI,Arizona Coyotes,ARI,ARI
-ATL,Atlanta Thrashers,ATL,ATL
-BOS,Boston Bruins,BOS,BOS
-BRK,Brooklyn Americans,BRK,BRK
-BUF,Buffalo Sabres,BUF,BUF
-CAR,Carolina Hurricanes,CAR,CAR
-CBJ,Columbus Blue Jackets,CBJ,CBJ
-CGS,California Golden Seals,CGS,CGS
-CGY,Calgary Flames,CGY,CGY
-CHI,Chicago Blackhawks,CHI,CHI
-CLE,Cleveland Barons,CLE,CLE
-CLR,Colorado Rockies,CLR,CLR
-COL,Colorado Avalanche,COL,COL
-DAL,Dallas Stars,DAL,DAL
-DCG,Detroit Cougars,DCG,DCG
-DET,Detroit Red Wings,DET,DET
-DFL,Detroit Falcons,DFL,DFL
-EDM,Edmonton Oilers,EDM,EDM
-FLA,Florida Panthers,FLA,FLA
-HAM,Hamilton Tigers,HAM,HAM
-HFD,Hartford Whalers,HFD,HFD
-KCS,Kansas City Scouts,KCS,KCS
-LAK,Los Angeles Kings,LAK,L.A
-MIN,Minnesota Wild,MIN,MIN
-MMR,Montreal Maroons,MMR,MMR
-MNS,Minnesota North Stars,MNS,MNS
-MTL,Montreal Canadiens,MTL,MTL
-MWN,Montreal Wanderers,MWN,MWN
-NJD,New Jersey Devils,NJD,N.J
-NSH,Nashville Predators,NSH,NSH
-NYA,New York Americans,NYA,NYA
-NYI,New York Islanders,NYI,NYI
-NYR,New York Rangers,NYR,NYR
-OAK,Oakland Seals,OAK,OAK
-OTT,Ottawa Senators,OTT,OTT
-PHI,Philadelphia Flyers,PHI,PHI
-PHX,Phoenix Coyotes,PHX,PHX
-PIR,Pittsburgh Pirates,PIR,PIR
-PIT,Pittsburgh Penguins,PIT,PIT
-QBD,Quebec Bulldogs,QBD,QBD
-QUA,Philadelphia Quakers,QUA,QUA
-QUE,Quebec Nordiques,QUE,QUE
-SEA,Seattle Kraken,SEA,SEA
-SLE,St. Louis Eagles,SLE,SLE
-SJS,San Jose Sharks,SJS,S.J
-STL,St. Louis Blues,STL,STL
-TAN,Toronto Arenas,TAN,TAN
-TBL,Tampa Bay Lightning,TBL,T.B
-TOR,Toronto Maple Leafs,TOR,TOR
-TSP,Toronto St. Patricks,TSP,TSP
-VAN,Vancouver Canucks,VAN,VAN
-VEG,Vegas Golden Knights,VGK,VGK
-WIN,Winnipeg Jets (original),WIN,WIN
-WPG,Winnipeg Jets,WPG,WPG
-WSH,Washington Capitals,WSH,WSH
-UTA,Utah Hockey Club,UTA,UTA
+Code,Team_Name,Code_alt,Code_nst,Logo
+AFM,Atlanta Flames,AFM,AFM,
+ANA,Anaheim Ducks,ANA,ANA,
+ARI,Arizona Coyotes,ARI,ARI,
+ATL,Atlanta Thrashers,ATL,ATL,
+BOS,Boston Bruins,BOS,BOS,
+BRK,Brooklyn Americans,BRK,BRK,
+BUF,Buffalo Sabres,BUF,BUF,
+CAR,Carolina Hurricanes,CAR,CAR,
+CBJ,Columbus Blue Jackets,CBJ,CBJ,
+CGS,California Golden Seals,CGS,CGS,
+CGY,Calgary Flames,CGY,CGY,
+CHI,Chicago Blackhawks,CHI,CHI,
+CLE,Cleveland Barons,CLE,CLE,
+CLR,Colorado Rockies,CLR,CLR,
+COL,Colorado Avalanche,COL,COL,
+DAL,Dallas Stars,DAL,DAL,
+DCG,Detroit Cougars,DCG,DCG,
+DET,Detroit Red Wings,DET,DET,
+DFL,Detroit Falcons,DFL,DFL,
+EDM,Edmonton Oilers,EDM,EDM,
+FLA,Florida Panthers,FLA,FLA,
+HAM,Hamilton Tigers,HAM,HAM,
+HFD,Hartford Whalers,HFD,HFD,
+KCS,Kansas City Scouts,KCS,KCS,
+LAK,Los Angeles Kings,LAK,L.A,
+MIN,Minnesota Wild,MIN,MIN,
+MMR,Montreal Maroons,MMR,MMR,
+MNS,Minnesota North Stars,MNS,MNS,
+MTL,Montreal Canadiens,MTL,MTL,
+MWN,Montreal Wanderers,MWN,MWN,
+NJD,New Jersey Devils,NJD,N.J,
+NSH,Nashville Predators,NSH,NSH,
+NYA,New York Americans,NYA,NYA,
+NYI,New York Islanders,NYI,NYI,
+NYR,New York Rangers,NYR,NYR,
+OAK,Oakland Seals,OAK,OAK,
+OTT,Ottawa Senators,OTT,OTT,
+PHI,Philadelphia Flyers,PHI,PHI,
+PHX,Phoenix Coyotes,PHX,PHX,
+PIR,Pittsburgh Pirates,PIR,PIR,
+PIT,Pittsburgh Penguins,PIT,PIT,
+QBD,Quebec Bulldogs,QBD,QBD,
+QUA,Philadelphia Quakers,QUA,QUA,
+QUE,Quebec Nordiques,QUE,QUE,
+SEA,Seattle Kraken,SEA,SEA,
+SLE,St. Louis Eagles,SLE,SLE,
+SJS,San Jose Sharks,SJS,S.J,
+STL,St. Louis Blues,STL,STL,
+TAN,Toronto Arenas,TAN,TAN,
+TBL,Tampa Bay Lightning,TBL,T.B,
+TOR,Toronto Maple Leafs,TOR,TOR,
+TSP,Toronto St. Patricks,TSP,TSP,
+VAN,Vancouver Canucks,VAN,VAN,
+VEG,Vegas Golden Knights,VGK,VGK,
+WIN,Winnipeg Jets (original),WIN,WIN,
+WPG,Winnipeg Jets,WPG,WPG,
+WSH,Washington Capitals,WSH,WSH,
+UTA,Utah Hockey Club,UTA,UTA,https://en.wikipedia.org/wiki/Utah_Mammoth#/media/File:Utah_Hockey_Club_2024-25_Logo.svg
+UTM,Utah Mammoth,UTM,UTM,https://en.wikipedia.org/wiki/Utah_Mammoth#/media/File:UtahMammoth.svg
