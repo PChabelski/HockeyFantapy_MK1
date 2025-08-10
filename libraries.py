@@ -43,7 +43,7 @@ import difflib
 import re
 import math
 
-root_dir = 'C:/Users/16472/PycharmProjects/Hockey_FantaPy/'
+root_dir = os.getcwd()+'/'
 
 def weeks_parser(year, control_file):
     # really this should be renamed the week metadata file
@@ -474,6 +474,7 @@ def online_data_parser(year, dates_of_interest, control_file):
             if control_file["Online Parser Status"]['yahoo_parse']:
                 #try:
                 yahoo_df = yahoo_data_collection(year, date_item, year, schedule_df, control_file, query)
+                os.makedirs(f'{root_dir}ONLINE_PARSED_DATA/YH_ROSTERS/{year}/', exist_ok=True)
                 yahoo_df.to_csv(f'{root_dir}ONLINE_PARSED_DATA/YH_ROSTERS/{year}/YH_stats_{date_item}_percentage_added.csv', index=False)
                 #except Exception as e:
                 #    print(f'No yahoo data found for day {date_item}: {e}')
@@ -483,7 +484,7 @@ def online_data_parser(year, dates_of_interest, control_file):
                 hr_df['Week'] = week_number
                 hr_df['WINS_HR'] = hr_df['DEC_HR'].copy().replace('W', 1).replace('L', '').replace('O', '')
                 hr_df['LOSSES_HR'] = hr_df['DEC_HR'].copy().replace('L', 1).replace('W', '').replace('O', '')
-
+                os.makedirs(f'{root_dir}ONLINE_PARSED_DATA/HR/{year}/', exist_ok=True)
                 hr_df.to_csv(f'{root_dir}ONLINE_PARSED_DATA/HR/{year}/HR_stats_{date_item}.csv', index=False)
             #                 except Exception as e:
             #                     print(f'No HR data found for day {date_item}: {e}')
@@ -495,6 +496,7 @@ def online_data_parser(year, dates_of_interest, control_file):
                     goalie_mask = nst_df["Position_NST"] == 'G'
                     nst_df['GOALIE_TOI'] = np.nan
                     nst_df.loc[goalie_mask, "GOALIE_TOI"] = nst_df.loc[goalie_mask, "TOI_NST"]
+                    os.makedirs(f'{root_dir}ONLINE_PARSED_DATA/NST/{year}/', exist_ok=True)
                     nst_df.to_csv(f'{root_dir}ONLINE_PARSED_DATA/NST/{year}/NST_stats_{date_item}.csv', index=False)
                 except Exception as e:
                    print(f'No NST data found for day {date_item}: {e}')
@@ -666,110 +668,153 @@ def teams_metadata(year, control_file):
 
 
 def scheduleParser(year, control_file):
-    if control_file['NHL Schedule Parser'] == True:
-        print(f'>>>> [Rundate: {time.ctime()}] Parsing schedules from Hockey-Reference.com for {year}')
-        # Pulls data from Hockey Reference Page for the selected years
-        weeks_df = pd.read_csv(f'{root_dir}WEEKS_DATA/{year}_week_data.csv')
-        year_plus = year + 1
-        page = requests.get(f"https://www.hockey-reference.com/leagues/NHL_{year_plus}_games.html")
-        print(f'>>>> [Rundate: {time.ctime()}] https://www.hockey-reference.com/leagues/NHL_{year_plus}_games.html')
-        #             try:
-        #                 with open(f'season_metadata_repo/{year}_season_metadata.json','r') as f:
-        #                     metadata_data = json.loads(f.read())
-        #             except:
-        #                 print(f'Could not load yahoo season metadata json for year {year} - either reparse this season metadata or the league has not been created yet!')
-        soup = BeautifulSoup(page.content, 'html.parser')
-
-        all_games = soup.find(id="all_games")
-        items = all_games.find_all(class_="left")
-
-        date = ''
-        teamA = ''
-        teamB = ''
-        week = ''
-        counter = 0
-        df_sched = pd.DataFrame(columns=['date', 'away', 'home', 'week'])
-
-        for i in range(0, len(items)):
-            # # skip 0 to 4
-            # # 5 (date),
-            # skip 6 (time)
-            # 7 (team A),8 (team B), skip 9 (notes)
-
-            if i < 5:
-                print(i, items[i], 'SKIP')
-                continue
-            if i % 5 == 0:
-                try:
-                    date = items[i]
-                    date = date.findChild("a").getText()
-                except:
-                    #  <th class="left" csk="202211080LAK" data-stat="date_game" scope="row">2022-11-08</th>,
-                    date = items[i]
-                    date = date.getText()
-                print(i, items[i], 'DATE')
-
-                # print('Date: ', date)
-                # print(type(date))
-                date = datetime.strptime(date, "%Y-%m-%d")
-                # print(type(date))
-
-                weekStat = 0
-                for week in weeks_df['week'].unique():
-
-                    start = datetime.strptime(weeks_df[weeks_df['week'] == week]['start'].values[0], '%Y-%m-%d')
-                    end = datetime.strptime(weeks_df[weeks_df['week'] == week]['end'].values[0],
-                                            '%Y-%m-%d') + timedelta(1)
-                    if year == 2012:  # 2012 starts on week 12 because it is ridiculous
-                        if date < end and date >= start and date >= datetime.strptime(
-                                weeks_df[weeks_df['week'] == 12]['start'].values[0], '%Y-%m-%d'):
-                            weekStat = week
-                            # print('This is in week: ', week)
-                            break
-                    else:
-                        if date < end and date >= start and date >= datetime.strptime(
-                                weeks_df[weeks_df['week'] == 1]['start'].values[0], '%Y-%m-%d'):
-                            weekStat = week
-                            # print('This is in week: ', week)
-                            break
-            if (i - 2) % 5 == 0:
-                teamA = items[i]
-                teamA = teamA.findChild("a").getText()
-                # print('teamA: ', teamA)
-            if (i - 3) % 5 == 0:
-                teamB = items[i]
-                teamB = teamB.findChild("a").getText()
-                # print('teamB: ', teamB)
-            if (i - 4) % 5 == 0:
-                df_sched.loc[counter, 'date'] = date.strftime("%Y-%m-%d")
-                df_sched.loc[counter, 'away'] = teamA
-                df_sched.loc[counter, 'home'] = teamB
-                df_sched.loc[counter, 'week'] = week
-                date = ''
-                teamA = ''
-                teamB = ''
-                week = ''
-                counter += 1
-                continue
-        # now go through each row and tag the team game count
-        df_sched['home_count'] = np.nan
-        df_sched['away_count'] = np.nan
-        for team in df_sched['home'].unique():
-            game_counter = 1
-            for j in range(0, len(df_sched)):
-                if team in df_sched['home'].iloc[j]:
-                    df_sched.loc[j, 'home_count'] = game_counter
-                    game_counter += 1
-                elif team in df_sched['away'].iloc[j]:
-                    df_sched.loc[j, 'away_count'] = game_counter
-                    game_counter += 1
-                else:
-                    pass
-
-        df_sched.to_csv(f'{root_dir}NHL_Schedules/{year}_NHL_Schedule.csv', index=False)
-        print(f'--> [Rundate: {time.ctime()}] {year} schedule successfully parsed')
-    else:
+    if not control_file['NHL Schedule Parser']:
         print(f'>>>> [Rundate: {time.ctime()}] Not running schedule scraper')
+        return
+
+    print(f'>>>> [Rundate: {time.ctime()}] Parsing schedules from Hockey-Reference.com for {year}')
+    weeks_df = pd.read_csv(f'{root_dir}WEEKS_DATA/{year}_week_data.csv')
+    year_plus = year + 1
+    page = requests.get(f"https://www.hockey-reference.com/leagues/NHL_{year_plus}_games.html")
+    soup = BeautifulSoup(page.content, 'html.parser')
+
+    items = soup.find(id="all_games").find_all(class_="left")
+    schedule_data = []
+
+    for i in range(5, len(items), 5):
+        try:
+            #date = datetime.strptime(items[i].findChild("a").getText(), "%Y-%m-%d")
+            date_str = items[i].find("a").getText()
+        except:
+            date_str = datetime.strptime(items[i].getText(), "%Y-%m-%d")
+        date = datetime.strptime(date_str, "%Y-%m-%d")
+        weekStat = next(
+            (week for week in weeks_df['week'].unique()
+             if datetime.strptime(weeks_df[weeks_df['week'] == week]['start'].values[0], '%Y-%m-%d') <= date <
+                datetime.strptime(weeks_df[weeks_df['week'] == week]['end'].values[0], '%Y-%m-%d') + timedelta(1)),
+            0
+        )
+
+        # teamA = items[i + 2].findChild("a").getText()
+        # teamB = items[i + 3].findChild("a").getText()
+        teamA = items[i + 2].find("a").getText()
+        teamB = items[i + 3].find("a").getText()
+        schedule_data.append({'date': date.strftime("%Y-%m-%d"), 'away': teamA, 'home': teamB, 'week': weekStat})
+
+    df_sched = pd.DataFrame(schedule_data)
+
+    # Calculate game counts using groupby and cumcount
+    df_sched['home_count'] = df_sched.groupby('home').cumcount() + 1
+    df_sched['away_count'] = df_sched.groupby('away').cumcount() + 1
+
+    df_sched.to_csv(f'{root_dir}NHL_Schedules/{year}_NHL_Schedule.csv', index=False)
+    print(f'--> [Rundate: {time.ctime()}] {year} schedule successfully parsed')
+
+# def scheduleParser(year, control_file):
+#     if control_file['NHL Schedule Parser'] == True:
+#         print(f'>>>> [Rundate: {time.ctime()}] Parsing schedules from Hockey-Reference.com for {year}')
+#         # Pulls data from Hockey Reference Page for the selected years
+#         weeks_df = pd.read_csv(f'{root_dir}WEEKS_DATA/{year}_week_data.csv')
+#         year_plus = year + 1
+#         page = requests.get(f"https://www.hockey-reference.com/leagues/NHL_{year_plus}_games.html")
+#         print(f'>>>> [Rundate: {time.ctime()}] https://www.hockey-reference.com/leagues/NHL_{year_plus}_games.html')
+#         #             try:
+#         #                 with open(f'season_metadata_repo/{year}_season_metadata.json','r') as f:
+#         #                     metadata_data = json.loads(f.read())
+#         #             except:
+#         #                 print(f'Could not load yahoo season metadata json for year {year} - either reparse this season metadata or the league has not been created yet!')
+#         soup = BeautifulSoup(page.content, 'html.parser')
+#
+#         all_games = soup.find(id="all_games")
+#         items = all_games.find_all(class_="left")
+#
+#         date = ''
+#         teamA = ''
+#         teamB = ''
+#         week = ''
+#         counter = 0
+#         df_sched = pd.DataFrame(columns=['date', 'away', 'home', 'week'])
+#
+#         for i in range(0, len(items)):
+#             # # skip 0 to 4
+#             # # 5 (date),
+#             # skip 6 (time)
+#             # 7 (team A),8 (team B), skip 9 (notes)
+#
+#             if i < 5:
+#                 print(i, items[i], 'SKIP')
+#                 continue
+#             if i % 5 == 0:
+#                 try:
+#                     date = items[i]
+#                     date = date.findChild("a").getText()
+#                 except:
+#                     #  <th class="left" csk="202211080LAK" data-stat="date_game" scope="row">2022-11-08</th>,
+#                     date = items[i]
+#                     date = date.getText()
+#                 print(i, items[i], 'DATE')
+#
+#                 # print('Date: ', date)
+#                 # print(type(date))
+#                 date = datetime.strptime(date, "%Y-%m-%d")
+#                 # print(type(date))
+#
+#                 weekStat = 0
+#                 for week in weeks_df['week'].unique():
+#
+#                     start = datetime.strptime(weeks_df[weeks_df['week'] == week]['start'].values[0], '%Y-%m-%d')
+#                     end = datetime.strptime(weeks_df[weeks_df['week'] == week]['end'].values[0],
+#                                             '%Y-%m-%d') + timedelta(1)
+#                     if year == 2012:  # 2012 starts on week 12 because it is ridiculous
+#                         if date < end and date >= start and date >= datetime.strptime(
+#                                 weeks_df[weeks_df['week'] == 12]['start'].values[0], '%Y-%m-%d'):
+#                             weekStat = week
+#                             # print('This is in week: ', week)
+#                             break
+#                     else:
+#                         if date < end and date >= start and date >= datetime.strptime(
+#                                 weeks_df[weeks_df['week'] == 1]['start'].values[0], '%Y-%m-%d'):
+#                             weekStat = week
+#                             # print('This is in week: ', week)
+#                             break
+#             if (i - 2) % 5 == 0:
+#                 teamA = items[i]
+#                 teamA = teamA.findChild("a").getText()
+#                 # print('teamA: ', teamA)
+#             if (i - 3) % 5 == 0:
+#                 teamB = items[i]
+#                 teamB = teamB.findChild("a").getText()
+#                 # print('teamB: ', teamB)
+#             if (i - 4) % 5 == 0:
+#                 df_sched.loc[counter, 'date'] = date.strftime("%Y-%m-%d")
+#                 df_sched.loc[counter, 'away'] = teamA
+#                 df_sched.loc[counter, 'home'] = teamB
+#                 df_sched.loc[counter, 'week'] = week
+#                 date = ''
+#                 teamA = ''
+#                 teamB = ''
+#                 week = ''
+#                 counter += 1
+#                 continue
+#         # now go through each row and tag the team game count
+#         df_sched['home_count'] = np.nan
+#         df_sched['away_count'] = np.nan
+#         for team in df_sched['home'].unique():
+#             game_counter = 1
+#             for j in range(0, len(df_sched)):
+#                 if team in df_sched['home'].iloc[j]:
+#                     df_sched.loc[j, 'home_count'] = game_counter
+#                     game_counter += 1
+#                 elif team in df_sched['away'].iloc[j]:
+#                     df_sched.loc[j, 'away_count'] = game_counter
+#                     game_counter += 1
+#                 else:
+#                     pass
+#
+#         df_sched.to_csv(f'{root_dir}NHL_Schedules/{year}_NHL_Schedule.csv', index=False)
+#         print(f'--> [Rundate: {time.ctime()}] {year} schedule successfully parsed')
+#     else:
+#         print(f'>>>> [Rundate: {time.ctime()}] Not running schedule scraper')
 
 
 def player_parser(query, players_unpacked):
@@ -1973,7 +2018,6 @@ def streamer_analytics(year, control_file):
         df_full = df_full[(df_full['Team_Yahoo'] != 'Free Agency') &
                           (df_full['Selected Position'] != 'BN') &
                           (df_full['Selected Position'] != 'IR+')]
-        # df_full.to_csv(f'{year}_test_out.csv')
         df_grouped = df_full.groupby(['season', 'Week', 'Player_Yahoo',
                                       'Team_Yahoo',
                                       'GM_Name'], as_index=False)[['FP_TOTAL',
@@ -2100,7 +2144,6 @@ def matchup_data_cruncher(year, control_file, position, total_df):
     else:
         print('Not sure what you are looking for ')
 
-    yahoo_stats_no_bench.to_csv(f'{root_dir}TEST_OUT.csv', index=False)
     grouped_yahoo_stats_no_bench = yahoo_stats_no_bench.groupby(['Year',
                                                                  'Week',
                                                                  'Matchup ID',

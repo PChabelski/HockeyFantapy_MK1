@@ -85,28 +85,28 @@
          "type":"Regular"
       }
    },
-   "run_type":"Today",
-   "custom_start":"2025-01-01",
-   "custom_end":"2025-01-21",
-   "NHL Schedule Parser":false,
-   "Weeks Metadata":false,
-   "Teams Metadata":false,
-   "Matchup Metadata":false,
-   "Yahoo Player Metadata Status":false,
-   "Draft Parser Status":false,
+   "run_type":"Custom",
+   "custom_start":"2024-10-04",
+   "custom_end":"2024-10-09",
+   "NHL Schedule Parser":true,
+   "Weeks Metadata":true,
+   "Teams Metadata":true,
+   "Matchup Metadata":true,
+   "Yahoo Player Metadata Status":true,
+   "Draft Parser Status":true,
    "Transaction Parser Status":true,
-   "Player Name Cleaner":true,
+   "Player Name Cleaner":false,
    "Online Parser Status":{
-      "overall_status":true,
+      "overall_status":false,
       "yahoo_parse":true,
-      "hr_parse":false,
-      "nst_parse":false
+      "hr_parse":true,
+      "nst_parse":true
 	  
 	  
    },
-   "Stitcher Status":false,
+   "Stitcher Status":true,
    "Fantasy Points":{
-      "fp_calculator_status":false,
+      "fp_calculator_status":true,
       "fp_calcs":{
          "Goals_NST":0.36,
          "Total Assists_NST":0.24,
@@ -123,22 +123,22 @@
          "SO_HR":1.33
       }
    },
-   "Fake Database Status":false,
-   "matchup_consolidator_status":false,
-   "logs_status":false,
-   "draft_analytics_status":false,
-   "keeper_analytics_status":false,
-   "streamer_analytics_status":false,
-   "bench_analytics_status":false,
-   "faab_analytics_status":false,
-   "forgotten_start_analytics_status":false,
-   "player_stats_analytics_status":false,
-   "hospital_status":false,
+   "Fake Database Status":true,
+   "matchup_consolidator_status":true,
+   "logs_status":true,
+   "draft_analytics_status":true,
+   "keeper_analytics_status":true,
+   "streamer_analytics_status":true,
+   "bench_analytics_status":true,
+   "faab_analytics_status":true,
+   "forgotten_start_analytics_status":true,
+   "player_stats_analytics_status":true,
+   "hospital_status":true,
    "trade_analytics_status":false,
-   "ownership_analytics_status":false,
-   "loyalty_analytics_status":false,
+   "ownership_analytics_status":true,
+   "loyalty_analytics_status":true,
    "cloud_upload_status":false,
-	
+
    "matchup_weights":{
       "week_val":0.80,
       "opp_val":0.20,

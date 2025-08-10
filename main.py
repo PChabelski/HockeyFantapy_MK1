@@ -1,11 +1,6 @@
-import setuptools.dist
 import pandas as pd
 import numpy as np
-import copy
 pd.options.display.float_format = '{:,}'.format
-from datetime import datetime
-from datetime import timedelta
-#import yfpy
 pd.set_option('mode.chained_assignment', None)
 pd.set_option('display.max_colwidth', None)
 pd.set_option('display.max_rows', None)
@@ -15,17 +10,20 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings('error')
 import logging
 logging.getLogger("yfpy.query").setLevel(level=logging.INFO)
-import json
 from libraries import *
-
 import time as time
 import os
-root_dir = 'C:/Users/16472/PycharmProjects/Hockey_FantaPy/'
+
+root_dir = os.getcwd()
+print(root_dir)
+os.makedirs(root_dir, exist_ok=True)
 time_start = time.time()
-print("GOOD DAY! FANTASY HOCKEY 2024 VERSION")
-with open(f'{root_dir}control_daily.json', 'r') as f:
+print("GOOD DAY! FANTASY HOCKEY 2025 VERSION")
+with open(f'{root_dir}/control_daily.json', 'r') as f:
 # with open(f'{root_dir}control_manual.json', 'r') as f:
     control_file = json.loads(f.read())
+
+
 today = (datetime.now()).strftime('%Y-%m-%d')
 yesterday = (datetime.now() - timedelta(1)).strftime('%Y-%m-%d')
 print(f'Today: {today} >><< Yesterday: {yesterday}')
