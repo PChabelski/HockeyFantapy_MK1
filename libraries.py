@@ -35,6 +35,8 @@ import os
 root_dir = os.getcwd()+'/'
 
 
+
+
 #########################################################################
 def scheduleParser(year, control_file):
     if not control_file['NHL Schedule Parser']:

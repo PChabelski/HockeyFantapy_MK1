@@ -14,6 +14,7 @@ from libraries import *
 import time as time
 import os
 import json
+import yahoo_class
 
 root_dir = os.getcwd()
 print(root_dir)
@@ -33,13 +34,23 @@ run_type = control_file['run_type']
 yearsToCheck = [int(x) for x in yearsToCheck.keys() if yearsToCheck[x]['status'] == "RUN"]
 print(control_file['Years'][str(yearsToCheck[0])]['league_id'])
 # ============================================================================================
+test_or_config_run = input("Is this a test run? (y/n): ").strip().lower()
+if test_or_config_run == 'y':
+    print("Running in test mode. Years are defined manually.")
+    yearsToCheck = [2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011]  # Only run for the first year in the list
+
+
 for year in yearsToCheck:
 
+    # Create the yahoo query object
+
+
     print(f'>> Starting up data parsing for {year}')
-    all_dates = chrono_trigger(year, run_type, control_file)
-    scheduleParser(year, control_file)
-    online_data_parser(year, all_dates, control_file)
-    weeks_parser(year, control_file)
+    yahoo_instance = yahoo_class.YahooInstance(control_file, root_dir, year)
+    #yahoo_instance.METADATA_PARSE_SCHEDULE()
+    yahoo_instance.METADATA_YAHOO_TEAMS()
+    #
+
 
     # # yahoo season week date infmo
     # # yahoo team metadata
@@ -73,8 +84,8 @@ for year in yearsToCheck:
     # loyalty_analytics(year,control_file)
 # ============================================================================================
 # Consolidation-level stuff (ie, stitch all the stuff together no matter what years are selected)
-trade_analytics( control_file)
-google_sheets_trunc_and_load(control_file)
+# trade_analytics( control_file)
+# google_sheets_trunc_and_load(control_file)
 
 time_end = time.time()
 
