@@ -67,7 +67,12 @@ for year in yearsToCheck:
             yahoo_instance.TRANSACTIONS()
         else:
             print("Skipping transactions parsing.")
-    #
+        if input("Do you want to run the matchups parsing? (y/n): ").strip().lower() == 'y':
+            print("Running matchups parsing...")
+            yahoo_instance.METADATA_MATCHUPS()
+        else:
+            print("Skipping matchups parsing.")
+
     # supplementary data parsing - will require upstream information to be available
     # yahoo_instance.TRANSACTIONS()
 
