@@ -34,23 +34,42 @@ run_type = control_file['run_type']
 yearsToCheck = [int(x) for x in yearsToCheck.keys() if yearsToCheck[x]['status'] == "RUN"]
 print(control_file['Years'][str(yearsToCheck[0])]['league_id'])
 # ============================================================================================
-test_or_config_run = input("Is this a test run? (y/n): ").strip().lower()
+test_or_config_run = input("Is this a full-bore reprocessing run? (y/n): ").strip().lower()
 if test_or_config_run == 'y':
     print("Running in test mode. Years are defined manually.")
-    yearsToCheck = [2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011]  # Only run for the first year in the list
+    yearsToCheck = [2018,2017,2016,2015,2014,2013,2012,2011]  # Only run for the first year in the list
+    #yearsToCheck = [2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011]  # Only run for the first year in the list
 
 
 for year in yearsToCheck:
 
     # Create the yahoo query object
 
-
     print(f'>> Starting up data parsing for {year}')
     yahoo_instance = yahoo_class.YahooInstance(control_file, root_dir, year)
-    #yahoo_instance.METADATA_PARSE_SCHEDULE()
-    yahoo_instance.METADATA_YAHOO_TEAMS()
+    if test_or_config_run == 'y':
+        yahoo_instance.METADATA_PARSE_SCHEDULE()
+        yahoo_instance.METADATA_YAHOO_TEAMS()
+        yahoo_instance.METADATA_PLAYERS()
+        yahoo_instance.TRANSACTIONS()
+        time.sleep(300)  # Sleep for 5 minutes to avoid hitting API limits too quickly
+    else:
+        # Baseline metadata parsing - this is the first thing that should be run
+        if input("Do you want to run the metadata parsing? (y/n): ").strip().lower() == 'y':
+            print("Running metadata parsing...")
+            yahoo_instance.METADATA_PARSE_SCHEDULE()
+            yahoo_instance.METADATA_YAHOO_TEAMS()
+            yahoo_instance.METADATA_PLAYERS()
+        else:
+            print("Skipping metadata parsing.")
+        if input("Do you want to run the transactions parsing? (y/n): ").strip().lower() == 'y':
+            print("Running transactions parsing...")
+            yahoo_instance.TRANSACTIONS()
+        else:
+            print("Skipping transactions parsing.")
     #
-
+    # supplementary data parsing - will require upstream information to be available
+    # yahoo_instance.TRANSACTIONS()
 
     # # yahoo season week date infmo
     # # yahoo team metadata
