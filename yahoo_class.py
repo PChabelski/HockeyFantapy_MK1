@@ -222,9 +222,6 @@ class YahooInstance:
         # this is used by the draft / transaction df
         player_df.to_csv(f'{self.current_directory}/YAHOO_PLAYER_METADATA/Yahoo_Players_{self.year}.csv', index=False)
 
-
-
-
     def TRANSACTIONS(self):
 
             print(f'>>>> [Rundate: {time.ctime()}] Deriving transactions for {self.year}:{self.league_id}:{self.game_id}')
@@ -453,3 +450,48 @@ class YahooInstance:
                                       right_on='Team_Name', suffixes=('_destination', '_source'))
             df_trans.drop(['Team_Name_destination', 'Team_Name_source'], axis=1, inplace=True)
             df_trans.to_csv(f'{self.current_directory}/TRANSACTIONS/{self.year}_transactions.csv', index=False)
+
+    def METADATA_MATCHUPS(self):
+
+        df_matchups = pd.DataFrame(columns=['Year', 'Week', 'Matchup ID', 'Team_Label','Team','Team_Key', 'Division', 'Playoffs'])
+        try:
+            df_weeks = pd.read_csv(f'{self.current_directory}/NHL_Schedules/{self.year}_NHL_Schedule.csv')
+        except FileNotFoundError:
+            print(
+                f'>>>> [Rundate: {time.ctime()}] No schedule found for {self.year}. Skipping transactions parsing - make sure the data is available.')
+            return
+        try:
+            df_teams = pd.read_csv(f'{self.current_directory}/TEAMS_METADATA/{self.year}_teams.csv')
+        except FileNotFoundError:
+            print(
+                f'>>>> [Rundate: {time.ctime()}] No teams metadata found for {self.year}. Skipping transactions parsing - make sure the data is available.')
+            return
+
+        for week in df_weeks['week_number'].unique():
+            if np.isnan(week):
+                continue
+            try:
+                matchups = self.query.get_league_matchups_by_week(str(int(week)))
+                print(f'>>>> [Rundate: {time.ctime()}] Parsing matchups for {self.year} week {week} - found {len(matchups)} matchups')
+            except:
+                print(f'>>>> [Rundate: {time.ctime()}] Parsing matchups for {self.year} week {week} - no matchups found (league over?)')
+                continue
+            for matchup_id in range(0, len(matchups)):
+                matchup_data = matchups[matchup_id]
+                team_a_data = matchup_data.teams[0]
+                team_a_name = team_a_data.name.decode('utf-8')
+                team_a_key = str(team_a_data.team_key)
+                team_a_division = team_a_data.division_id
+                is_playoffs = matchup_data.is_playoffs
+                df_matchups.loc[len(df_matchups)] = (self.year, week, matchup_id, 'A',team_a_name, team_a_key, team_a_division, is_playoffs)
+
+                team_b_data = matchup_data.teams[1]
+                team_b_name = team_b_data.name.decode('utf-8')
+                team_b_key = str(team_b_data.team_key)
+                team_b_division = team_b_data.division_id
+                df_matchups.loc[len(df_matchups)] = (self.year, week, matchup_id, 'B',team_b_name, team_b_key, team_b_division, is_playoffs)
+
+
+        df_matchups = df_matchups.merge(df_teams[['Team_Key','GM_Name', 'Photo_URL']], how='left', left_on='Team_Key',right_on='Team_Key')
+        df_matchups.to_csv(f'{self.current_directory}/MATCHUPS_METADATA/{self.year}_matchups_metadata.csv', index=False)
+        print(f'>>>> [Rundate: {time.ctime()}] Successfully parsed {self.year} matchups metadata')
