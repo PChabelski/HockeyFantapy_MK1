@@ -38,7 +38,7 @@ class YahooInstance:
         Parses NHL game schedules from the Hockey-Reference website for a given year.
         The method retrieves schedule data, processes it into a structured format, and saves it as a CSV file.
         """
-
+        df_nhl_codes = pd.read_csv(f'{self.current_directory}/MANUAL_DATA/Hockey_Team_Codes.csv')
         # Log the start of the parsing process
         print(f'>>>> [Rundate: {time.ctime()}] Parsing schedules from Hockey-Reference.com for {self.year}')
 
@@ -90,10 +90,8 @@ class YahooInstance:
         print(f'>>>> [Rundate: {time.ctime()}] Got list of boxscore codes')
 
         # Map the URLCODE to the schedule DataFrame based on the game date
-        df_sched['urlcode'] = df_sched['date'].map(
-            lambda d: next(
-                (g for g in list_of_games if datetime.strptime(g[:8], '%Y%m%d').strftime('%Y-%m-%d') == d), None)
-        )
+        df_sched['urlcode'] = df_sched.apply(
+            lambda x: str(x['date'].replace('-',''))+'0'+df_nhl_codes[df_nhl_codes['Team_Name']==x['home']]['Code'].values[0], axis=1)
 
         # Log the completion of URLCODE mapping
         print(f'>>>> [Rundate: {time.ctime()}] URLCODE added via mapper')
@@ -495,3 +493,248 @@ class YahooInstance:
         df_matchups = df_matchups.merge(df_teams[['Team_Key','GM_Name', 'Photo_URL']], how='left', left_on='Team_Key',right_on='Team_Key')
         df_matchups.to_csv(f'{self.current_directory}/MATCHUPS_METADATA/{self.year}_matchups_metadata.csv', index=False)
         print(f'>>>> [Rundate: {time.ctime()}] Successfully parsed {self.year} matchups metadata')
+
+
+
+    def ONLINE_DATA_PARSER_HOCKEYREFERENCE(self, dates_to_check):
+
+        df_schedule = pd.read_csv(f'{self.current_directory}/NHL_Schedules/{self.year}_NHL_Schedule.csv')
+        ref_list = pd.read_csv(f'{self.current_directory}/MANUAL_DATA/Hockey_Team_Codes.csv')
+
+        for date in dates_to_check:
+            games_in_day_df = pd.DataFrame()
+            # this is the same code snippet I've been using for many years to pull the hockey-reference data
+            # Could use a bit of scrubbing BUT it works so leaving it for now
+            url_list = df_schedule[df_schedule['date']==date]['urlcode'].unique()
+            for url in url_list:
+                urlGame = f'https://www.hockey-reference.com/boxscores/{url}.html'
+                page = requests.get(urlGame)
+                if page.status_code == 429:
+                    print(f'>>>> [Rundate: {time.ctime()}] Rate limit hit at HR parser! Break out.')
+                    return
+
+                soup = BeautifulSoup(page.content, 'html.parser')
+                try:
+                    url_date = datetime.strptime(url[:8], '%Y%m%d').strftime('%Y-%m-%d')
+                except:
+                    print(f'>>>> [Rundate: {time.ctime()}] No game found for {urlGame}. Skipping this date.')
+                    continue
+                test = soup.find('div', id=["inner_nav"])
+                list_metadata = list(test)
+                list_metadata = list_metadata[1].text.split('\n')
+                list_metadata = [x for x in list_metadata if x != '']
+                list_metadata = [x for x in list_metadata if x != ' ']
+                home_team = list_metadata[-1].split('Schedule/Results')[0].strip()
+                home_code = url[9:]
+                away_team = list_metadata[-2].split('Schedule/Results')[0].strip()
+                away_code = ref_list['Code'][ref_list['Team_Name'] == away_team].values[0].strip()
+                # skater data has 17 colsfor 2014 onwards
+                # but only 13 for 2013 and before
+                resetCounter = 17 if self.year > 2013 else 14
+                ###########################################################
+                # Team 1 are away. Team 2 are home
+                team_1_skaters = soup.find('table', id=[f"{away_code}_skaters"])
+                team_2_skaters = soup.find('table', id=[f"{home_code}_skaters"])
+                team_1_goalies = soup.find('table', id=[f"{away_code}_goalies"])
+                team_2_goalies = soup.find('table', id=[f"{home_code}_goalies"])
+                team_1_adv_stats = soup.find('table', id=[f"{away_code}_adv_ALLAll"])
+                team_2_adv_stats = soup.find('table', id=[f"{home_code}_adv_ALLAll"])
+                ##############################################################
+                skater_data = []
+                total_skater_data = []
+                headers = list(team_1_skaters)[5].get_text().split('\n')
+                headers = [x for x in headers if x != '']
+                colDropInd = 4 if self.year > 2013 else 3 # differences in the years thereafter
+                headers = headers[colDropInd:]  # drop the first few dressing columns
+                for i in range(0, len(list(list(team_1_skaters)[7].find_all('td')))):
+                    if (i % resetCounter == 0) and (i != 0):
+                        total_skater_data.append(skater_data)
+                        skater_data = []
+                    value = list(list(team_1_skaters)[7].find_all('td'))[i].text
+                    skater_data.append(value)
+
+                total_skater_data.append(skater_data)  # to get the goalie, for concat purposes
+                awaySkaterDf = pd.DataFrame(data=total_skater_data, columns=headers)
+                skater_data = []
+                total_skater_data = []
+                for i in range(0, len(list(list(team_2_skaters)[7].find_all('td')))):
+                    if (i % resetCounter == 0) and (i != 0):
+                        total_skater_data.append(skater_data)
+                        skater_data = []
+                    value = list(list(team_2_skaters)[7].find_all('td'))[i].text
+                    skater_data.append(value)
+                total_skater_data.append(skater_data)  # to get the goalie, for concat purposes
+
+                awaySkaterDf['Date'] = date
+                awaySkaterDf['Team'] = away_team
+                awaySkaterDf['Team_Code'] = away_code
+                homeSkaterDf = pd.DataFrame(data=total_skater_data, columns=headers)
+                homeSkaterDf['Date'] = date
+                homeSkaterDf['Team'] = home_team
+                home_code = 'VGK' if home_code == 'VEG' else home_code
+                homeSkaterDf['Team_Code'] = home_code
+
+                total_skater_df = pd.concat([homeSkaterDf, awaySkaterDf])
+
+                ######################################
+                goalie_data = []
+                total_goalie_data = []
+
+                headers = list(team_1_goalies)[5].get_text().split('\n')
+
+                headers = [x for x in headers if x != '']
+                headers = headers[2:]
+                for i in range(0, len(list(list(team_1_goalies)[7].find_all('td')))):
+                    value = list(list(team_1_goalies)[7].find_all('td'))[i].text
+                    goalie_data.append(value)
+                    if (i % 8 == 0) and (i != 0):
+                        total_goalie_data.append(goalie_data)
+                        goalie_data = []
+                awaygoalieDf = pd.DataFrame(data=total_goalie_data, columns=headers)
+                awaygoalieDf['Date'] = date
+                awaygoalieDf['Team'] = away_team
+                away_code = 'VGK' if away_code == 'VEG' else away_code
+                awaygoalieDf['Team_Code'] = away_code
+                goalie_data = []
+                total_goalie_data = []
+                for i in range(0, len(list(list(team_2_goalies)[7].find_all('td')))):
+                    value = list(list(team_2_goalies)[7].find_all('td'))[i].text
+                    goalie_data.append(value)
+                    if (i % 8 == 0) and (i != 0):
+                        total_goalie_data.append(goalie_data)
+                        goalie_data = []
+                homeGoalieDf = pd.DataFrame(data=total_goalie_data, columns=headers)
+                homeGoalieDf['Date'] = date
+                homeGoalieDf['Team'] = home_team
+                homeGoalieDf['Team_Code'] = home_code
+                total_goalie_df = pd.concat([awaygoalieDf, homeGoalieDf])
+                total_goalie_df.drop(['PIM', 'TOI'], inplace=True,
+                                     axis=1)  # we will concat this to the total df, which already contains the data
+
+                #################################################################
+
+                adv_skater_data = []
+                adv_total_skater_data = []
+                headers = list(team_1_adv_stats)[5].get_text().split(' ')
+                headers = [x for x in headers if x != '']
+                headers = headers[1:]
+                for i in range(0, len(list(list(team_1_adv_stats)[7].find_all('td')))):
+
+                    if (i % 10 == 0) and (i != 0):
+                        adv_total_skater_data.append(adv_skater_data)
+                        adv_skater_data = []
+                    value = list(list(team_1_adv_stats)[7].find_all('td'))[i].text
+                    adv_skater_data.append(value)
+                adv_total_skater_data.append(adv_skater_data)  # for the last skater
+
+                adv_skater_data = []
+                for i in range(0, len(list(list(team_2_adv_stats)[7].find_all('td')))):
+                    if (i % 10 == 0) and (i != 0):
+                        adv_total_skater_data.append(adv_skater_data)
+                        adv_skater_data = []
+                    value = list(list(team_2_adv_stats)[7].find_all('td'))[i].text
+                    adv_skater_data.append(value)
+                adv_total_skater_data.append(adv_skater_data)  # for the last skater
+
+                total_adv_skater_df = pd.DataFrame(data=adv_total_skater_data, columns=headers)
+
+                # the adv stats table has the names in th for some reason
+                plyrList = []
+                for i in range(0, len(list(list(team_1_adv_stats)[7].find_all('th')))):
+                    plyrList.append(list(list(team_1_adv_stats)[7].find_all('th'))[i].text)
+                for i in range(0, len(list(list(team_2_adv_stats)[7].find_all('th')))):
+                    plyrList.append(list(list(team_2_adv_stats)[7].find_all('th'))[i].text)
+
+                total_adv_skater_df['Player'] = plyrList
+
+                concat_df1 = total_skater_df.merge(total_adv_skater_df, on=["Player"], how='left')
+                final_hr_df = concat_df1.merge(total_goalie_df, on=["Player", "Date", "Team"], how='left')
+                final_hr_df.drop(['Team_Code_y'], axis=1, inplace=True)
+                games_in_day_df = pd.concat([games_in_day_df, final_hr_df])
+            games_in_day_df.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/HR/{self.year}/HR_Stats_{date}_{url}.csv', index=False)
+            print(f'>>>> [Rundate: {time.ctime()}] Successfully parsed HR data for {url}.')
+
+            time.sleep(30)  # to avoid hitting the rate limit on hockey-reference.com
+
+
+    def ONLINE_DATA_PARSER_NATURALSTATTRICK(self, dates_to_check):
+
+        df_schedule = pd.read_csv(f'{self.current_directory}/NHL_Schedules/{self.year}_NHL_Schedule.csv')
+        ref_list = pd.read_csv(f'{self.current_directory}/MANUAL_DATA/Hockey_Team_Codes.csv')
+
+        for date in dates_to_check:
+
+            year = date.split('-')[0]
+            month = date.split('-')[1]
+            day = date.split('-')[2]
+            url_year = str(self.year)+str(self.year+1)
+            # SKATER PART
+            urlPart1 = f'https://www.naturalstattrick.com/playerteams.php?fromseason={url_year}&thruseason={url_year}'
+            urlPart2 = f'&stype=2&sit=all&score=all&stdoi=std&rate=n&team=ALL&pos=S&loc=B&toi=0&gpfilt=gpdate&fd={year}-{month}-{day}&td={year}-{month}-{day}&tgp=410&lines=single&draftteam=ALL'
+            url = urlPart1 + urlPart2
+            print(url)
+            page = requests.get(url)
+            if page.status_code == 429:
+                print(f'>>>> [Rundate: {time.ctime()}] Rate limit hit at NST parser! Break out.')
+                return
+            soup = BeautifulSoup(page.content, 'html.parser')
+            top = list(soup.children)
+            # The .text method will extract the text within the tags.
+            # We’ll pass the columns text into a list to use later.
+            body = list(top[1].children)[14]
+            columns = [item.text for item in body.find_all('th')]
+            # Now we’ll find all the ‘td’ tags where the data is contained
+            # And we’ll pass the text of the data into a list
+            data = [e.text for e in body.find_all('td')]
+            # Construct the pandas dataframe that will contain all the pulled data
+            start = 0
+            table = []
+            # loop through entire data
+            while start + len(columns) <= len(data):
+                player = []
+                # use length of columns as iteration stop point to get list of info for 1 player
+                for i in range(start, start + len(columns)):
+                    player.append(data[i])
+                # add player row to list
+                table.append(player)
+                # start at next player
+                start += len(columns)
+
+            df_skater = pd.DataFrame(table, columns=columns).set_index('')
+            # GOALIE PART
+            urlPart1 = f'https://www.naturalstattrick.com/playerteams.php?fromseason={url_year}&thruseason={url_year}'
+            urlPart2 = f'&stype=2&sit=all&score=all&stdoi=g&rate=n&team=ALL&pos=S&loc=B&toi=0&gpfilt=gpdate&fd={year}-{month}-{day}&td={year}-{month}-{day}&tgp=410&lines=single&draftteam=ALL'
+            url = urlPart1 + urlPart2
+            page = requests.get(url)
+            # print(page.status_code)
+            soup = BeautifulSoup(page.content, 'html.parser')
+            top = list(soup.children)
+            # The .text method will extract the text within the tags.
+            # We’ll pass the columns text into a list to use later.
+            body = list(top[1].children)[14]
+            columns = [item.text for item in body.find_all('th')]
+            # Now we’ll find all the ‘td’ tags where the data is contained
+            # And we’ll pass the text of the data into a list
+            data = [e.text for e in body.find_all('td')]
+            # Construct the pandas dataframe that will contain all the pulled data
+            start = 0
+            table = []
+            # loop through entire data
+            while start + len(columns) <= len(data):
+                player = []
+                # use length of columns as iteration stop point to get list of info for 1 player
+                for i in range(start, start + len(columns)):
+                    player.append(data[i])
+                # add player row to list
+                table.append(player)
+                # start at next player
+                start += len(columns)
+
+            df_goalies = pd.DataFrame(table, columns=columns).set_index('')
+            df_data = pd.concat([df_skater, df_goalies])
+            df_data['Date'] = date
+            df_data['Code'] = df_data['Team'].map(ref_list.set_index('Code_nst')['Code_alt'])
+
+            df_data.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/NST/{self.year}/NST_Stats_{date}.csv', index=False)
+
+            time.sleep(20) # to avoid hitting the rate limit on naturalstattrick.com
