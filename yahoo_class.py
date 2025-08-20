@@ -651,7 +651,7 @@ class YahooInstance:
                 final_hr_df = concat_df1.merge(total_goalie_df, on=["Player", "Date", "Team"], how='left')
                 final_hr_df.drop(['Team_Code_y'], axis=1, inplace=True)
                 games_in_day_df = pd.concat([games_in_day_df, final_hr_df])
-            games_in_day_df.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/HR/{self.year}/HR_Stats_{date}_{url}.csv', index=False)
+            games_in_day_df.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/HR/{self.year}/HR_Stats_{date}.csv', index=False)
             print(f'>>>> [Rundate: {time.ctime()}] Successfully parsed HR data for {url}.')
 
             time.sleep(30)  # to avoid hitting the rate limit on hockey-reference.com
@@ -737,4 +737,4 @@ class YahooInstance:
 
             df_data.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/NST/{self.year}/NST_Stats_{date}.csv', index=False)
 
-            time.sleep(20) # to avoid hitting the rate limit on naturalstattrick.com
+            time.sleep(30) # to avoid hitting the rate limit on naturalstattrick.com
