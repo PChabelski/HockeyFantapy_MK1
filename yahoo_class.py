@@ -738,3 +738,59 @@ class YahooInstance:
             df_data.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/NST/{self.year}/NST_Stats_{date}.csv', index=False)
 
             time.sleep(30) # to avoid hitting the rate limit on naturalstattrick.com
+
+
+    def ONLINE_DATA_PARSER_YAHOOROSTERS(self, dates_to_check):
+
+        df_schedule = pd.read_csv(f'{self.current_directory}/NHL_Schedules/{self.year}_NHL_Schedule.csv')
+        ref_list = pd.read_csv(f'{self.current_directory}/MANUAL_DATA/Hockey_Team_Codes.csv')
+        teams_data = pd.read_csv(f'{self.current_directory}/TEAMS_METADATA/{self.year}_teams.csv')
+
+        for date in dates_to_check:
+            df_rosterstats = pd.DataFrame(columns=['Date', 'Team', 'Name', 'Selected Position', 'Elligible Positions',
+                                                  'Player Key', 'Year', 'Week', 'Percentage Owned',
+                                                  'Percentage Owned Delta'])
+            for team_name in teams_data['Team_Name'].unique():
+                team_id = teams_data[teams_data['Team_Name'] == team_name]['Team_Key'].values[0]
+                team_number = team_id.split('.')[4]
+                result = self.query.get_team_roster_player_info_by_date(team_id=team_number, chosen_date=date)
+                roster_dictionary = {}
+                for plyr in range(0, len(result)):
+                    pylrDict = {plyr: result[plyr].clean_data_dict()}
+                    roster_dictionary.update(pylrDict)
+
+                for plrnum in range(0, len(roster_dictionary)):
+                    if int(self.year) < 2024: # this was before we started doing this calculation
+                        percentage_owned = 100
+                        percentage_owned_delta = 0
+                    else:
+                        try:
+                            percentage_owned = plrData['percent_owned']['value']
+                            percentage_owned_delta = plrData['percent_owned']['delta']
+                        except:
+                            percentage_owned = 0
+                            percentage_owned_delta = 0
+
+
+
+                    plrData = roster_dictionary[plrnum]
+                    firstName = plrData['name']['first']
+                    lastName = plrData['name']['last']
+                    fullName = firstName + " " + lastName
+                    player_key = plrData["player_key"]
+                    selectedPosition = plrData['selected_position']['position']
+                    elligiblePositions = str(plrData['eligible_positions'])
+                    df_rosterstats.loc[len(df_rosterstats)] = (
+                        date,
+                        team_name,
+                        fullName,
+                        selectedPosition,
+                        elligiblePositions,
+                        player_key,
+                        self.year,
+                        df_schedule[df_schedule['date'] == date]['week_number'].iloc[0],
+                        percentage_owned,
+                        percentage_owned_delta
+                    )
+            df_rosterstats.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/YH_ROSTERS/{self.year}/YH_STATS_{date}_new.csv', index=False)
+            time.sleep(60) # to avoid hitting the rate limit on Yahoo Fantasy Sports API

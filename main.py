@@ -92,6 +92,11 @@ elif test_or_config_run == '2':
         else:
             print("Skipping Natural Stat Trick data parser.")
 
+        if input("Do you want to run the Yahoo data parser for the specified dates? (y/n): ").strip().lower() == 'y':
+            yahoo_instance.ONLINE_DATA_PARSER_YAHOOROSTERS(dates_to_check)
+        else:
+            print("Skipping Yahoo data parser.")
+
     # # yahoo season week date infmo
     # # yahoo team metadata
     # teams_metadata(year, control_file)
