@@ -17,12 +17,10 @@ import json
 import yahoo_class
 
 root_dir = os.getcwd()
-print(root_dir)
 os.makedirs(root_dir, exist_ok=True)
 time_start = time.time()
 print("GOOD DAY! FANTASY HOCKEY 2025 VERSION")
-with open(f'{root_dir}/control_daily.json', 'r') as f:
-# with open(f'{root_dir}control_manual.json', 'r') as f:
+with open(f'{root_dir}/MANUAL_DATA/control_daily.json', 'r') as f:
     control_file = json.loads(f.read())
 
 
@@ -32,34 +30,49 @@ print(f'Today: {today} >><< Yesterday: {yesterday}')
 yearsToCheck = control_file['Years']  # .keys()
 run_type = control_file['run_type']
 yearsToCheck = [int(x) for x in yearsToCheck.keys() if yearsToCheck[x]['status'] == "RUN"]
-print(control_file['Years'][str(yearsToCheck[0])]['league_id'])
 # ============================================================================================
-test_or_config_run = input("Is this a full-bore reprocessing run? (y/n): ").strip().lower()
-if test_or_config_run == 'y':
-    print("Running in test mode. Years are defined manually.")
-    yearsToCheck = [2018,2017,2016,2015,2014,2013,2012,2011]  # Only run for the first year in the list
-    #yearsToCheck = [2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011]  # Only run for the first year in the list
+test_or_config_run = input("Live system (1) or custom-operation (2)?: ").strip().lower()
+if test_or_config_run == '1':
+    print("Live system operation. Only run the previous day's worth of data")
+    yearsToCheck = [2025]
+    date_of_interest = yesterday
+    '''
+    Define all the code when ready to run the live system.
+    This will only run the previous day's worth of data, and will not prompt for any user
+    input. It will also not run any of the metadata parsing, as that should be done
+    beforehand.
+    
+    '''
 
+# ============================================================================================
+# ============================================================================================
 
-for year in yearsToCheck:
+elif test_or_config_run == '2':
+    yearsToCheck = input("Enter the years you want to run (comma separated, e.g. 2023,2024): ").strip().split(',')
+    print(f"You have selected the following years: {yearsToCheck}")
+    yearsToCheck = [int(x.strip()) for x in yearsToCheck if x.strip().isdigit()]
+    for year in yearsToCheck:
+        # Create the yahoo query object
+        print(f'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+        print(f'>> Starting up data parsing for {year}')
+        yahoo_instance = yahoo_class.YahooInstance(control_file, root_dir, year)
+        dates_to_check = input("Enter the dates you want to run (comma separated, e.g. 2023-01-01,2023-01-02) OR ALL if you want everything in the season: ").strip().split(',')
+        if dates_to_check == ['ALL']:
+            print('Grabbing all dates in the season...')
+            dates_to_check = pd.read_csv(f'{yahoo_instance.current_directory}/NHL_SCHEDULES/{year}_NHL_schedule.csv')['date'].tolist()
+        else:
+            print('Grabbing specific dates...')
+            dates_to_check = [x.strip() for x in dates_to_check if x.strip()]
+        print(f'>> Dates to check: {dates_to_check}')
+        print(f'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
 
-    # Create the yahoo query object
-
-    print(f'>> Starting up data parsing for {year}')
-    yahoo_instance = yahoo_class.YahooInstance(control_file, root_dir, year)
-    if test_or_config_run == 'y':
-        yahoo_instance.METADATA_PARSE_SCHEDULE()
-        yahoo_instance.METADATA_YAHOO_TEAMS()
-        yahoo_instance.METADATA_PLAYERS()
-        yahoo_instance.TRANSACTIONS()
-        time.sleep(300)  # Sleep for 5 minutes to avoid hitting API limits too quickly
-    else:
         # Baseline metadata parsing - this is the first thing that should be run
         if input("Do you want to run the metadata parsing? (y/n): ").strip().lower() == 'y':
             print("Running metadata parsing...")
             yahoo_instance.METADATA_PARSE_SCHEDULE()
             yahoo_instance.METADATA_YAHOO_TEAMS()
             yahoo_instance.METADATA_PLAYERS()
+            yahoo_instance.METADATA_MATCHUPS()
         else:
             print("Skipping metadata parsing.")
         if input("Do you want to run the transactions parsing? (y/n): ").strip().lower() == 'y':
@@ -67,14 +80,22 @@ for year in yearsToCheck:
             yahoo_instance.TRANSACTIONS()
         else:
             print("Skipping transactions parsing.")
-        if input("Do you want to run the matchups parsing? (y/n): ").strip().lower() == 'y':
-            print("Running matchups parsing...")
-            yahoo_instance.METADATA_MATCHUPS()
-        else:
-            print("Skipping matchups parsing.")
 
-    # supplementary data parsing - will require upstream information to be available
-    # yahoo_instance.TRANSACTIONS()
+        # Run the online data parser for the specified dates
+        if input("Do you want to run the Hockey Reference data parser for the specified dates? (y/n): ").strip().lower() == 'y':
+            yahoo_instance.ONLINE_DATA_PARSER_HOCKEYREFERENCE(dates_to_check)
+        else:
+            print("Skipping Hockey Reference data parser.")
+
+        if input("Do you want to run the Natural Stat Trick data parser for the specified dates? (y/n): ").strip().lower() == 'y':
+            yahoo_instance.ONLINE_DATA_PARSER_NATURALSTATTRICK(dates_to_check)
+        else:
+            print("Skipping Natural Stat Trick data parser.")
+
+        if input("Do you want to run the Yahoo data parser for the specified dates? (y/n): ").strip().lower() == 'y':
+            yahoo_instance.ONLINE_DATA_PARSER_YAHOOROSTERS(dates_to_check)
+        else:
+            print("Skipping Yahoo data parser.")
 
     # # yahoo season week date infmo
     # # yahoo team metadata
@@ -110,9 +131,11 @@ for year in yearsToCheck:
 # Consolidation-level stuff (ie, stitch all the stuff together no matter what years are selected)
 # trade_analytics( control_file)
 # google_sheets_trunc_and_load(control_file)
+else:
+    print("Invalid input. Please enter 1 or 2.")
+    exit(1)
 
 time_end = time.time()
-
 print(f">>>> [Rundate: {time.ctime()}] Finished in {time_end - time_start}s! See ya!")
 
 
