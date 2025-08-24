@@ -10,7 +10,46 @@ import time
 from bs4 import BeautifulSoup, Comment
 import requests
 from urllib.request import urlopen
+import difflib
+import unidecode
+from rapidfuzz import process, fuzz
 
+
+# Universal helper functions
+def clean_name(name):
+    return unidecode.unidecode(name).lower().strip()
+
+
+# -------------------------------
+# 🤝 Helper: Fuzzy Merge Function
+# -------------------------------
+def fuzzy_merge(df_left, df_right, key_left, key_right, threshold=85, scorer=fuzz.token_sort_ratio, score_label='match_score'):
+    # Normalize
+    df_left['__clean_left'] = df_left[key_left].apply(clean_name)
+    df_right['__clean_right'] = df_right[key_right].apply(clean_name)
+
+    # Fuzzy match each row
+    matches = df_left['__clean_left'].apply(
+        lambda x: process.extractOne(x, df_right['__clean_right'], scorer=scorer)
+    )
+
+    # Pull match values and scores
+    df_left['__matched_clean_right'] = [m[0] if m and m[1] >= threshold else None for m in matches]
+    df_left[score_label] = [m[1] if m else 0 for m in matches]
+
+    # Merge on matched cleaned names
+    merged = df_left.merge(
+        df_right,
+        left_on='__matched_clean_right',
+        right_on='__clean_right',
+        suffixes=('', '_right'),
+        how='left'
+    )
+
+    # Drop helper cols
+    return merged.drop(columns=['__clean_left', '__matched_clean_right', '__clean_right'])
+
+# Yahoo class definition and standard methods
 class YahooInstance:
     """
     Generic engine for running the code.
@@ -494,8 +533,6 @@ class YahooInstance:
         df_matchups.to_csv(f'{self.current_directory}/MATCHUPS_METADATA/{self.year}_matchups_metadata.csv', index=False)
         print(f'>>>> [Rundate: {time.ctime()}] Successfully parsed {self.year} matchups metadata')
 
-
-
     def ONLINE_DATA_PARSER_HOCKEYREFERENCE(self, dates_to_check):
 
         df_schedule = pd.read_csv(f'{self.current_directory}/NHL_Schedules/{self.year}_NHL_Schedule.csv')
@@ -651,11 +688,11 @@ class YahooInstance:
                 final_hr_df = concat_df1.merge(total_goalie_df, on=["Player", "Date", "Team"], how='left')
                 final_hr_df.drop(['Team_Code_y'], axis=1, inplace=True)
                 games_in_day_df = pd.concat([games_in_day_df, final_hr_df])
+            os.mkdir(f'{self.current_directory}/ONLINE_PARSED_DATA/HR/{self.year}') if not os.path.exists(f'{self.current_directory}/ONLINE_PARSED_DATA/HR/{self.year}') else None
             games_in_day_df.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/HR/{self.year}/HR_Stats_{date}.csv', index=False)
             print(f'>>>> [Rundate: {time.ctime()}] Successfully parsed HR data for {url}.')
 
             time.sleep(30)  # to avoid hitting the rate limit on hockey-reference.com
-
 
     def ONLINE_DATA_PARSER_NATURALSTATTRICK(self, dates_to_check):
 
@@ -734,11 +771,10 @@ class YahooInstance:
             df_data = pd.concat([df_skater, df_goalies])
             df_data['Date'] = date
             df_data['Code'] = df_data['Team'].map(ref_list.set_index('Code_nst')['Code_alt'])
-
+            os.mkdir(f'{self.current_directory}/ONLINE_PARSED_DATA/NST/{self.year}') if not os.path.exists(f'{self.current_directory}/ONLINE_PARSED_DATA/NST/{self.year}') else None
             df_data.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/NST/{self.year}/NST_Stats_{date}.csv', index=False)
 
             time.sleep(30) # to avoid hitting the rate limit on naturalstattrick.com
-
 
     def ONLINE_DATA_PARSER_YAHOOROSTERS(self, dates_to_check):
 
@@ -794,3 +830,72 @@ class YahooInstance:
                     )
             df_rosterstats.to_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/YH_ROSTERS/{self.year}/YH_STATS_{date}_new.csv', index=False)
             time.sleep(60) # to avoid hitting the rate limit on Yahoo Fantasy Sports API
+
+
+    def POST_PROCESSING_ROSTER_STITCHER(self, dates_to_check):
+        df_teams = pd.read_csv(f'{self.current_directory}/TEAMS_METADATA/{self.year}_teams.csv')
+        for date in dates_to_check:
+            try:
+                df_yh = pd.read_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/YH_ROSTERS/{self.year}/YH_STATS_{date}_percentage_added.csv')
+            except FileNotFoundError:
+                print(f'>>>> [Rundate: {time.ctime()}] No Yahoo Rosters data found for {self.year} on {date}. Skipping roster stitcher for this date.')
+                continue
+            try:
+                df_hr = pd.read_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/HR/{self.year}/HR_Stats_{date}.csv')
+            except FileNotFoundError:
+                print(f'>>>> [Rundate: {time.ctime()}] No Hockey Reference data found for {self.year} on {date}. Skipping roster stitcher for this date.')
+                continue
+            try:
+                df_nst = pd.read_csv(f'{self.current_directory}/ONLINE_PARSED_DATA/NST/{self.year}/NST_Stats_{date}.csv')
+            except FileNotFoundError:
+                print(f'>>>> [Rundate: {time.ctime()}] No Natural Stat Trick data found for {self.year} on {date}. Skipping roster stitcher for this date.')
+                continue
+
+            for df in [df_nst, df_hr, df_yh]:
+                try:
+                    df['CleanName'] = df['Player'].apply(clean_name)
+                except:
+                    df['CleanName'] = df['Name'].apply(clean_name)
+
+            # Merge df1 with df2
+            merged_1_2 = fuzzy_merge(df_nst, df_hr, 'CleanName', 'CleanName', threshold=85)
+
+            # Merge the result with df3
+            final_merged = fuzzy_merge(merged_1_2, df_yh, 'CleanName', 'CleanName', threshold=85)
+
+
+
+            # # This is the old-style implementation... put this on ice until I can think of a better use
+            # # first things first - create a clean player name field on all three datasets; replace all the special chars, lowercase, etc
+            # df_yh['Clean_Name'] = df_yh['Name'].str.replace('[^a-zA-Z ]', '', regex=True).str.lower().str.strip().replace(" ", "")
+            # df_hr['Clean_Name'] = df_hr['Player'].str.replace('[^a-zA-Z ]', '', regex=True).str.lower().str.strip().replace(" ", "")
+            # df_nst['Clean_Name'] = df_nst['Player'].str.replace('[^a-zA-Z ]', '', regex=True).str.lower().str.strip().replace(" ", "")
+            #
+            # def close_matchup_wrapper(x, df_data, strtype):
+            #     try:
+            #         best_match = difflib.get_close_matches(x, df_data, cutoff=0.75)[0]
+            #         # print(f'{strtype} found {best_match} for {x}')
+            #         score = difflib.SequenceMatcher(None, x, best_match).ratio()
+            #         return best_match, score
+            #     except Exception as e:
+            #         print(f'Could not find a good match for: {x} on {strtype}')
+            #         return ''
+            #
+            # # Link the HR data to NST
+            # df_nst[['NST_TO_HR_NAME','NST_TO_HR_SCORE']] = df_nst['Clean_Name'].apply(
+            #     lambda x: close_matchup_wrapper(x, df_hr['Clean_Name'], 'NST_TO_HR')).apply(pd.Series)
+            # df_hrnst = df_nst.merge(df_hr, left_on='NST_TO_HR_NAME', right_on='Clean_Name')
+            # # drop every column with _y, and rename the _x ones
+            # df_hrnst.drop([x for x in df_hrnst.columns if '_y' in x], axis=1, inplace=True)
+            # df_hrnst.rename(columns={x: x.replace('_x', '') for x in df_hrnst.columns if '_x' in x}, inplace=True)
+            #
+            # df_yh[['YH_TO_HR_NAME','YH_TO_HR_SCORE']] = df_yh['Clean_Name'].apply(
+            #     lambda x: close_matchup_wrapper(x, df_hrnst['NST_TO_HR_NAME'], 'YH_TO_HR')).apply(pd.Series)
+            #
+            # df_hrnstyh = df_hrnst.merge(df_yh,how='outer', left_on='NST_TO_HR_NAME', right_on='YH_TO_HR_NAME')
+            #
+            # # Link the YH data to the HR/NST stitched data
+
+            os.mkdir(f'{self.current_directory}/STITCHED_PARSED_DATA/{self.year}') if not os.path.exists(f'{self.current_directory}/STITCHED_PARSED_DATA/{self.year}') else None
+            final_merged.to_csv(f'{self.current_directory}/STITCHED_PARSED_DATA/{self.year}/NST_HR_STITCHED_STATS_{date}.csv', index=False)
+            print(f'>>>> [Rundate: {time.ctime()}] Successfully stitched NST and HR data for {self.year} on {date}.')

@@ -67,7 +67,7 @@ elif test_or_config_run == '2':
         print(f'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
 
         # Baseline metadata parsing - this is the first thing that should be run
-        if input("Do you want to run the metadata parsing? (y/n): ").strip().lower() == 'y':
+        if input("\nDo you want to run the metadata parsing? (y/n): ").strip().lower() == 'y':
             print("Running metadata parsing...")
             yahoo_instance.METADATA_PARSE_SCHEDULE()
             yahoo_instance.METADATA_YAHOO_TEAMS()
@@ -75,27 +75,32 @@ elif test_or_config_run == '2':
             yahoo_instance.METADATA_MATCHUPS()
         else:
             print("Skipping metadata parsing.")
-        if input("Do you want to run the transactions parsing? (y/n): ").strip().lower() == 'y':
+        if input("\nDo you want to run the transactions parsing? (y/n): ").strip().lower() == 'y':
             print("Running transactions parsing...")
             yahoo_instance.TRANSACTIONS()
         else:
             print("Skipping transactions parsing.")
 
         # Run the online data parser for the specified dates
-        if input("Do you want to run the Hockey Reference data parser for the specified dates? (y/n): ").strip().lower() == 'y':
+        if input("\nDo you want to run the Hockey Reference data parser for the specified dates? (y/n): ").strip().lower() == 'y':
             yahoo_instance.ONLINE_DATA_PARSER_HOCKEYREFERENCE(dates_to_check)
         else:
             print("Skipping Hockey Reference data parser.")
 
-        if input("Do you want to run the Natural Stat Trick data parser for the specified dates? (y/n): ").strip().lower() == 'y':
+        if input("\nDo you want to run the Natural Stat Trick data parser for the specified dates? (y/n): ").strip().lower() == 'y':
             yahoo_instance.ONLINE_DATA_PARSER_NATURALSTATTRICK(dates_to_check)
         else:
             print("Skipping Natural Stat Trick data parser.")
 
-        if input("Do you want to run the Yahoo data parser for the specified dates? (y/n): ").strip().lower() == 'y':
+        if input("\nDo you want to run the Yahoo data parser for the specified dates? (y/n): ").strip().lower() == 'y':
             yahoo_instance.ONLINE_DATA_PARSER_YAHOOROSTERS(dates_to_check)
         else:
             print("Skipping Yahoo data parser.")
+
+        if input("\nDo you want to run the data stitching process for the specified dates? (y/n): ").strip().lower() == 'y':
+            yahoo_instance.POST_PROCESSING_ROSTER_STITCHER(dates_to_check)
+        else:
+            print("Skipping data stitching process.")
 
     # # yahoo season week date infmo
     # # yahoo team metadata
