@@ -59,7 +59,7 @@ elif test_or_config_run == '2':
         dates_to_check = input("Enter the dates you want to run (comma separated, e.g. 2023-01-01,2023-01-02) OR ALL if you want everything in the season: ").strip().split(',')
         if dates_to_check == ['ALL']:
             print('Grabbing all dates in the season...')
-            dates_to_check = pd.read_csv(f'{yahoo_instance.current_directory}/NHL_SCHEDULES/{year}_NHL_schedule.csv')['date'].tolist()
+            dates_to_check = pd.read_csv(f'{yahoo_instance.current_directory}/NHL_SCHEDULES/{year}_NHL_schedule.csv')['date'].unique()
         else:
             print('Grabbing specific dates...')
             dates_to_check = [x.strip() for x in dates_to_check if x.strip()]
